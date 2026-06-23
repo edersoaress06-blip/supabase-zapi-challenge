@@ -31,9 +31,6 @@ SUPABASE_TABLE: str = os.getenv("SUPABASE_TABLE", "contacts")
 ZAPI_INSTANCE_ID: str = os.environ["ZAPI_INSTANCE_ID"]
 ZAPI_TOKEN: str = os.environ["ZAPI_TOKEN"]
 
-# Número fixo para redirecionamento em fase de desenvolvimento (conta Trial)
-TEST_PHONE: str = "5511978458099"
-
 ZAPI_BASE_URL: str = (
     f"https://api.z-api.io/instances/{ZAPI_INSTANCE_ID}/token/{ZAPI_TOKEN}"
 )
@@ -117,11 +114,6 @@ def main() -> None:
         return
 
     # 2. Enviar mensagem para cada contato via Z-API
-    logger.warning(
-        "[MODO TESTE] Todos os envios serão redirecionados para %s. "
-        "O número do banco de dados será ignorado.",
-        TEST_PHONE,
-    )
     success_count = 0
     for contact in contacts:
         name: str = contact.get("name", "").strip()
@@ -131,16 +123,14 @@ def main() -> None:
             logger.warning("Contato ignorado por nome ausente: %s", contact)
             continue
 
-        # Segurança: ignora o telefone do banco e envia sempre para o número de teste
-        logger.info(
-            "Contato: %s | Telefone original ignorado: %s | Redirecionando para: %s",
-            name,
-            phone or "(vazio)",
-            TEST_PHONE,
-        )
+        if not phone:
+            logger.warning("Contato ignorado por telefone ausente: %s", contact)
+            continue
+
+        logger.info("Enviando para %s (%s)...", name, phone)
 
         try:
-            send_whatsapp_message(phone=TEST_PHONE, name=name)
+            send_whatsapp_message(phone=phone, name=name)
             success_count += 1
         except requests.exceptions.HTTPError as exc:
             logger.error(
